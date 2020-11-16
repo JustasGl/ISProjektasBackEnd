@@ -1,0 +1,86 @@
+/ patikrinti ar prisijunges / ------------------------------------------------------------
+GET request	localhost:8000/login
+
+/ Atsijungti / ---------------------------------------------------------------------------
+DELETE request	localhost:8000/login
+
+/ prisijungimas / ------------------------------------------------------------------------
+POST request	localhost:8000/login
+
+{
+	"Email": "vardas@gmail.com",
+	"Password": "Password1"
+}
+
+/ Slaptazodzio keitimas / ------------------------------------------------------------------------
+PATCH request	localhost:8000/login
+
+{
+	"Password": "Password1",
+	"newPassword": "Password2",
+	"newPasswordRepeat": "Password2"
+}
+
+/ registracija /  -------------------------------------------------------------------------
+POST request	localhost:8000/account
+
+{
+	"Email": "vardas@gmail.com",
+	"Password": "Password1",
+	"RepeatPassword": "Password1"
+}
+//EMail turi turėti @. Password turi tureti bent viena didziaja raide ir viena skaiciu
+//Name, LastName, UserName, DateOfBirth, Address, PostalCode, Role (nebūtini). Email, password, repadpassword (būtini).
+/ duomenu keitimas /  -------------------------------------------------------------------------
+PATCH request	localhost:8000/account
+LAUKU KURIU NEREDAGUOJAM NERASOM, t.y ne tuscios reiksmes, o eilutes NEBUVIMAS
+{
+	"Username": "Vardaszxzxx",
+	"Name": "Justas",
+	"LastName": "Pavarde",
+	"Address": "Pasiles 39, Kaunas",
+	"PostalCode": "868564",
+	"Role": 1
+}
+/Gauti nr. 1 naudotojo duomenis/----------------------------------------------------------------------
+GET request localhost:8000/account?id=1
+
+/ Sekti vartotoja /  -------------------------------------------------------------------------
+Post request	localhost:8000/follow/1
+
+
+
+/ create game / --------------------------------------------------------------------------
+Galima tik prisijungus t.y atsiuntus auth token turint role = 1(admin)
+POST request	localhost:8000/games 
+
+{
+	"name": "Battlefield 9",
+	"description": "Clasical shooter",
+	"price": 39.99,
+	"category": "shooter"
+}
+
+/ edit game / --------------------------------------------------------------------------
+Galima tik prisijungus t.y atsiuntus auth token
+PATCH request	localhost:8000/games/{id}
+LAUKU KURIU NEREDAGUOJAM NERASOM, t.y ne tuscios reiksmes, o eilutes NEBUVIMAS
+{
+	"description": "very long edited description",
+	"startTime": "2020-04-18T11:48:12Z",
+	"endTime": "2020-04-21T11:48:12Z"
+}
+
+/ delete game / --------------------------------------------------------------------------
+DELETE request, gali tik savininkas	localhost:8000/games/{id}
+
+
+/ get game /  ---------------------------------------------------------------------------
+GET request
+
+localhost:8000/games?category=shooter
+arba
+localhost:8000/games?creatorID=id
+arba
+localhost:8000/games?priceFrom=20&priceTo=40
+
