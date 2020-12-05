@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,19 +13,21 @@ import (
 )
 
 type Rating struct {
-	ID          uint       `json: "-" gorm:"primary_key"`
-	Score       int        `json: "Score"`
-	Comment     string     `json: "Comment"`
-	CreatedAt   time.Time  `json: "-"`
-	UpdatedAt   time.Time  `json: "-"`
-	DeletedAt   *time.Time `json: "-"`
-	CreatorID   uint
-	Creator     User `gorm:"foreignkey:CreatorID"`
-	CreatorName string
-	//Rating	   []Rating `gorm:"many2many:games_raited;"`
+	ID           uint       `json: "-" gorm:"primary_key"`
+	Score        float64    `json: "Score"`
+	Comment      string     `json: "Comment"`
+	CreatedAt    time.Time  `json: "-"`
+	UpdatedAt    time.Time  `json: "-"`
+	DeletedAt    *time.Time `json: "-"`
+	CreatorID    uint
+	Creator      User `gorm:"foreignkey:CreatorID"`
+	CreatorEmail string
+	GameID       uint
+	Game         Game `gorm:"foreignkey:GameID"`
+	GameName     string
 }
 
-func CreateRating(w http.ResponseWriter, r *http.Request) {
+func Rate(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -35,22 +38,54 @@ func CreateRating(w http.ResponseWriter, r *http.Request) {
 	// Get the user that is creating the rating
 	var user User
 	db.First(&user, session.Values["userID"].(uint))
+	fmt.Println("User ID is ", user.ID)
+	//Gets game id from /Rate/{id}
+	params := mux.Vars(r)
+	gameID, err := strconv.Atoi(params["id"])
 
-	var newRating Rating
-	// Get rating data from json body
-	err := json.NewDecoder(r.Body).Decode(&newRating)
-	newRating.Creator = user
-	newRating.CreatorName = user.Username
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
 
+	var game Game
+	db.Raw("Select * from games where id = ?", gameID).Scan(&game)
+	fmt.Println("game ID is ", game.ID)
+
+	Rate := struct {
+		Comment string  `json: "Comment"`
+		Score   float64 `json: "Score"`
+	}{"", 0}
+	err = json.NewDecoder(r.Body).Decode(&Rate)
+
+	if err != nil {
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	newRating := Rating{
+		Comment:      Rate.Comment,
+		Score:        Rate.Score,
+		CreatorID:    user.ID,
+		Creator:      user,
+		CreatorEmail: user.Email,
+		GameID:       game.ID,
+		GameName:     game.Name,
+	}
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	CheckUserID := int(user.ID)
+	ChecKGameID := int(game.ID)
+	if CheckUserID == 0 || ChecKGameID == 0 {
+		fmt.Println(" Game Id is ", game.ID, " User id is ", user.ID)
+		w.WriteHeader(http.StatusNotFound)
+		JSONResponse(struct{}{}, w)
+		return
+	}
 
-	// Create an association between creator_id and a users id
-	db.Model(&newRating).AddForeignKey("creator_id", "users(id)", "RESTRICT", "RESTRICT")
-	// Create rating
 	if db.Create(&newRating).Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		JSONResponse(struct{}{}, w)
@@ -58,31 +93,42 @@ func CreateRating(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	JSONResponse(struct{}{}, w)
+	JSONResponse(&newRating, w)
 	return
 }
 
 func GetRatings(w http.ResponseWriter, r *http.Request) {
-	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
+	// Gets filtering keys from url. e.x ?comment=Puikus&creatorId=1&GameID=1
 	keys := r.URL.Query()
 	id := keys.Get("ID")
 	creatorID := keys.Get("CreatorID")
 	comment := keys.Get("Comment")
-
+	GameID := keys.Get("GameID")
+	RatingFrom := keys.Get("From")
+	RatingTo := keys.Get("To")
 	var ratings []Rating
 
 	// Preloads user and creator tables for use in rating response
-	tx := db.Preload("Users").Preload("Creator")
+	tx := db.Preload("Game").Preload("Creator")
 
 	// If a certain tag is not null, it is used to filter ratings
 	if comment != "" {
-		tx = tx.Where("Comment = ?", comment)
+		tx = tx.Where("Comment like ?", comment)
 	}
 	if creatorID != "" {
 		tx = tx.Where("creator_id = ?", creatorID)
 	}
 	if id != "" {
 		tx = tx.Where("ID = ?", id)
+	}
+	if GameID != "" {
+		tx = tx.Where("game_id = ?", GameID)
+	}
+	if RatingTo != "" {
+		tx = tx.Where("Score < ?", RatingTo)
+	}
+	if RatingFrom != "" {
+		tx = tx.Where("Score > ?", RatingFrom)
 	}
 	// Finds ratings based on given parameters
 	tx.Find(&ratings)
@@ -99,7 +145,7 @@ func GetRatings(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func DeleteRaiting(w http.ResponseWriter, r *http.Request) {
+func DeleteRating(w http.ResponseWriter, r *http.Request) {
 	//Loads creator id from authentication token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -122,7 +168,7 @@ func DeleteRaiting(w http.ResponseWriter, r *http.Request) {
 
 	//Loads rating with joined users preloaded
 	var rating Rating
-	db.Preload("Users").Where("id = ?", ratingID).First(&rating)
+	db.Where("id = ?", ratingID).First(&rating)
 
 	//checks if the user that is trying to delete rating is its creator
 	if rating.CreatorID != userID {
@@ -146,7 +192,7 @@ func DeleteRaiting(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func EditRaiting(w http.ResponseWriter, r *http.Request) {
+func EditRating(w http.ResponseWriter, r *http.Request) {
 	//Loads creator id from authentication token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -169,7 +215,7 @@ func EditRaiting(w http.ResponseWriter, r *http.Request) {
 
 	//Loads rating with joined users preloaded
 	var rating Rating
-	tx := db.Preload("Users").Where("id = ?", ratingID).First(&rating)
+	tx := db.Where("id = ?", ratingID).First(&rating)
 
 	//checks if the user that is trying to delete rating is its creator
 	if rating.CreatorID != userID {

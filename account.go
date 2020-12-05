@@ -33,14 +33,12 @@ type User struct {
 	Following   int        `json:"FollowingAmount"`
 	Followers   int        `json:"FollowersAmount"`
 
-	Salt   string `json:"-" gorm:"size:64;not null"`
-	Follow []User `gorm:"many2many:Follow;association_jointable_foreignkey:follower_id"`
-	//BoughtList []*Game `gorm:"many2many:games_bought;"`
+	Salt       string  `json:"-" gorm:"size:64;not null"`
+	Cart       []Game  `gorm:"many2many:Cart;"`
+	Follow     []User  `gorm:"many2many:Follow;association_jointable_foreignkey:follower_id"`
+	BoughtList []*Game `gorm:"many2many:games_bought;"`
 
-	//Cart       []Game     `gorm:"foreignKey:cart_game"`
-	//WishList   []Game     `gorm:"foreignKey:wish_game"`
-	//RatedGames []Rating   `gorm:"many2many:games_rated;"`
-
+	WishList []Game `gorm:"many2many:WishList;"`
 }
 
 //RegisterPageHandler decodes user sent in data, verifies that
@@ -412,6 +410,15 @@ func FollowUser(w http.ResponseWriter, r *http.Request) {
 		JSONResponse(struct{}{}, w)
 		return
 	}
+	//Check if current user doesint already follow the selected user
+	var CheckUser User
+	database := db.Raw("Select user_id as ID from Follow where user_id = ? and follower_id = ?", selectedUser.ID, user.ID).Scan(&CheckUser)
+
+	if database.RowsAffected != 0 {
+		w.WriteHeader(http.StatusAlreadyReported)
+		JSONResponse(struct{}{}, w)
+		return
+	}
 
 	//Add user to followings
 	db.Model(&selectedUser).Association("Follow").Append(&user)
@@ -463,11 +470,19 @@ func UnfollowUser(w http.ResponseWriter, r *http.Request) {
 		JSONResponse(struct{}{}, w)
 		return
 	}
+	var CheckUser User
+	database := db.Raw("Select user_id as ID from Follow where user_id = ? and follower_id = ?", selectedUser.ID, user.ID).Scan(&CheckUser)
 
+	if database.RowsAffected == 0 {
+		w.WriteHeader(http.StatusAlreadyReported)
+		JSONResponse(struct{}{}, w)
+		return
+	}
 	// Delete user from follow
-	db.Model(&selectedUser).Association("Follow").Delete(&user)
-	db.Model(&selectedUser).Updates(User{Followers: selectedUser.Followers - 1})
+
+	db.Exec("UPDATE Users SET Followers=? WHERE ID = ?", selectedUser.Followers-1, selectedUser.ID)
 	db.Model(&user).Updates(User{Following: user.Following - 1})
+	db.Model(&selectedUser).Association("Follow").Delete(&user)
 
 	w.WriteHeader(http.StatusOK)
 	JSONResponse(struct{}{}, w)
@@ -475,21 +490,27 @@ func UnfollowUser(w http.ResponseWriter, r *http.Request) {
 }
 func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
-	keys := r.URL.Query()
-	id := keys.Get("id")
 	var users []User
 
+	params := mux.Vars(r)
+	usrID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	fmt.Printf("get %d user followers", usrID)
 	// Preloads user and creator tables for use in game response
-	tx := db.Preload("Follow")
 
 	// If a certain tag is not null, it is used to filter games
-	if id != "" {
-		tx = tx.Where("user_following = ?", id)
+	if usrID != 0 {
+		db.Raw("select * from users where id IN ((Select follower_id from Follow where user_id = ?))", usrID).Scan(&users)
 	}
 	// Finds users based on given parameters
-	tx.Find(&users)
 
-	// If no games exist, return Bad request
+	// If no users exist, return Bad request
 	if len(users) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		JSONResponse(struct{}{}, w)
@@ -501,20 +522,24 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetFollowings(w http.ResponseWriter, r *http.Request) {
-	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
-	keys := r.URL.Query()
-	id := keys.Get("id")
 	var users []User
 
+	params := mux.Vars(r)
+	usrID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	fmt.Printf("get %d user followings", usrID)
 	// Preloads user and creator tables for use in game response
-	tx := db.Preload("Follow")
 
 	// If a certain tag is not null, it is used to filter games
-	if id != "" {
-		tx = tx.Where("user_following = ?", id)
+	if usrID != 0 {
+		db.Raw("select * from users where id IN ((Select user_id from Follow where follower_id = ?))", usrID).Scan(&users)
 	}
-	// Finds users based on given parameters
-	tx.Find(&users)
 
 	// If no games exist, return Bad request
 	if len(users) == 0 {
@@ -525,5 +550,252 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	JSONResponse(users, w)
+	return
+}
+func AddCart(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	//Gets id from /follow/{id}
+	params := mux.Vars(r)
+	gameID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	//Get users
+	var user User
+	db.First(&user, session.Values["userID"].(uint))
+
+	var game Game
+	db.Raw("Select * from games where ID = ?", gameID).Scan(&game)
+
+	//Check if both users exist
+	if game.ID == 0 || user.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	db.Model(&user).Association("Cart").Append(&game)
+
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(struct{}{}, w)
+	return
+}
+func GetCart(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	var games []Game
+	db.Raw("SELECT * from games WHERE ID IN (select game_id from cart WHERE user_id = ?)", session.Values["userID"]).Scan(&games)
+
+	if len(games) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(games, w)
+	return
+}
+
+func RemoveCart(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	var user User
+	db.First(&user, session.Values["userID"].(uint))
+
+	params := mux.Vars(r)
+	gameID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	var game Game
+
+	db.Raw("SELECT * from users where ID = (select user_id from Cart where game_id = ?)", gameID).Scan(&game)
+
+	if game.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	db.Model(&user).Association("Cart").Delete(&game)
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(struct{}{}, w)
+	return
+}
+func AddWishList(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	//Gets id from /follow/{id}
+	params := mux.Vars(r)
+	gameID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	//Get users
+	var user User
+	db.First(&user, session.Values["userID"].(uint))
+
+	var game Game
+	db.Raw("Select * from games where ID = ?", gameID).Scan(&game)
+
+	//Check if both users exist
+	if game.ID == 0 || user.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	db.Model(&user).Association("WishList").Append(&game)
+
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(struct{}{}, w)
+	return
+}
+func GetWishList(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	var games []Game
+	db.Raw("SELECT * from games WHERE ID IN (select game_id from WishList WHERE user_id = ?)", session.Values["userID"]).Scan(&games)
+
+	if len(games) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(games, w)
+	return
+}
+
+func RemoveWishList(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	var user User
+	db.First(&user, session.Values["userID"].(uint))
+
+	params := mux.Vars(r)
+	gameID, err := strconv.Atoi(params["id"])
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	var game Game
+
+	db.Raw("SELECT * from users where ID = (select user_id from WishList where game_id = ?)", gameID).Scan(&game)
+
+	if game.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	db.Model(&user).Association("WishList").Delete(&game)
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(struct{}{}, w)
+	return
+}
+func GetBoughtList(w http.ResponseWriter, r *http.Request) {
+	session, _ := sessionStore.Get(r, "Access-token")
+
+	if session.Values["userID"] == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	var games []Game
+	db.Raw("SELECT * from games WHERE ID IN (select game_id from games_bought WHERE user_id = ?)", session.Values["userID"]).Scan(&games)
+
+	if len(games) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(games, w)
+	return
+}
+func GetAccounts(w http.ResponseWriter, r *http.Request) {
+	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
+	keys := r.URL.Query()
+	FromFollowers := keys.Get("FromFollowers")
+	FromFollowings := keys.Get("FromFollowings")
+	ToFollowers := keys.Get("ToFollowers")
+	ToFollowings := keys.Get("ToFollowings")
+	var Users []User
+
+	// Preloads user and creator tables for use in game response
+	tx := db
+
+	// If a certain tag is not null, it is used to filter games
+	if FromFollowers != "" {
+		tx = tx.Where("Followers > ?", FromFollowers)
+	}
+	if FromFollowings != "" {
+		tx = tx.Where("Following > ?", FromFollowings)
+	}
+	if ToFollowers != "" {
+		tx = tx.Where("Followers < ?", ToFollowers)
+	}
+	if ToFollowings != "" {
+		tx = tx.Where("Following < ?", ToFollowings)
+	}
+	// Finds games based on given parameters
+	tx.Find(&Users)
+
+	// If no games exist, return Bad request
+	if len(Users) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	JSONResponse(Users, w)
 	return
 }

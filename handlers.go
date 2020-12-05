@@ -40,7 +40,6 @@ func HandleFunctions() {
 	r.HandleFunc("/games", CreateGame).Methods("POST")
 	r.HandleFunc("/games/{id}", EditGame).Methods("PATCH")
 	r.HandleFunc("/games/{id}", DeleteGame).Methods("DELETE")
-
 	r.HandleFunc("/games/{id}/users", SellGame).Methods("PATCH")
 
 	r.HandleFunc("/follow/{id}", FollowUser).Methods("POST")
@@ -48,5 +47,23 @@ func HandleFunctions() {
 
 	r.HandleFunc("/followers/{id}", GetFollowers).Methods("GET")
 	r.HandleFunc("/followings/{id}", GetFollowings).Methods("GET")
+
+	r.HandleFunc("/cart", GetCart).Methods("GET")
+	r.HandleFunc("/cart/{id}", AddCart).Methods("POST")
+	r.HandleFunc("/cart/{id}", RemoveCart).Methods("DELETE")
+
+	r.HandleFunc("/wishlist", GetWishList).Methods("GET")
+	r.HandleFunc("/wishlist/{id}", AddWishList).Methods("POST")
+	r.HandleFunc("/wishlist/{id}", RemoveWishList).Methods("DELETE")
+
+	r.HandleFunc("/BoughtList", GetBoughtList).Methods("GET")
+
+	r.HandleFunc("/rate/{id}", Rate).Methods("POST")
+	r.HandleFunc("/rate", GetRatings).Methods("GET")
+	r.HandleFunc("/rate/{id}", EditRating).Methods("PATCH")
+	r.HandleFunc("/rate/{id}", DeleteRating).Methods("DELETE")
+
+	r.HandleFunc("/accounts", GetAccounts).Methods("GET")
+
 	http.ListenAndServe(":8000", r)
 }

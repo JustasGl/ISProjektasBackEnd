@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,7 +25,6 @@ type Game struct {
 	CreatorID   uint
 	Creator     User `gorm:"foreignkey:CreatorID"`
 
-	//Rating	   []Rating `gorm:"many2many:games_raited;"`
 	BoughtList []User `gorm:"many2many:games_bought;"`
 }
 
@@ -70,6 +70,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func SellGame(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("%s\n", "SellGame Called")
 	//Get user id from auth token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -110,7 +111,7 @@ func SellGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Add user to game
+	//Add game to Bought List
 	db.Model(&selectedGame).Association("BoughtList").Append(&user)
 	db.Model(&selectedGame).Updates(Game{Sells: selectedGame.Sells + 1})
 
@@ -129,7 +130,7 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 	var games []Game
 
 	// Preloads user and creator tables for use in game response
-	tx := db.Preload("Users")
+	tx := db.Preload("Creator").Preload("ratings")
 
 	// If a certain tag is not null, it is used to filter games
 	if category != "" {
@@ -138,8 +139,12 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 	if creatorID != "" {
 		tx = tx.Where("creator_id = ?", creatorID)
 	}
-	if creatorID != "" {
+	if PriceFrom != "" && PriceTo != "" {
 		tx = tx.Where("Price > ? and Price < ?", PriceFrom, PriceTo)
+	} else if PriceFrom != "" {
+		tx = tx.Where("Price > ?", PriceFrom)
+	} else if PriceTo != "" {
+		tx = tx.Where("Price < ?", PriceFrom)
 	}
 	// Finds games based on given parameters
 	tx.Find(&games)
@@ -179,7 +184,7 @@ func DeleteGame(w http.ResponseWriter, r *http.Request) {
 
 	//Loads game with joined users preloaded
 	var game Game
-	db.Preload("Users").Where("id = ?", gameID).First(&game)
+	db.Where("id = ?", gameID).First(&game)
 
 	//checks if the user that is trying to delete game is its creator
 	if game.CreatorID != userID {
@@ -226,8 +231,8 @@ func EditGame(w http.ResponseWriter, r *http.Request) {
 
 	//Loads game with joined users preloaded
 	var game Game
-	tx := db.Preload("Users").Where("id = ?", gameID).First(&game)
-
+	tx := db.Where("ID = ?", gameID).First(&game)
+	db.First(&game, gameID)
 	//checks if the user that is trying to delete game is its creator
 	if game.CreatorID != userID {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -250,6 +255,7 @@ func EditGame(w http.ResponseWriter, r *http.Request) {
 	if updatedGame.Name != "" {
 		tx.Model(&game).Updates(Game{Name: updatedGame.Name})
 	}
+
 	// //Edits the record in database
 	// if tx.Model(&game).Updates(Game{Description: updatedGame.Description}).RowsAffected == 0 {
 	// 	w.WriteHeader(http.StatusBadRequest)
