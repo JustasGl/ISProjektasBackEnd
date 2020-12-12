@@ -6,12 +6,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-//LandingPage comment
 func LandingPage(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	w.Write([]byte("Hello world"))
 }
 
-//RefreshToken refreshes authentication token WORK IN PROGRESS not even close to complete
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	refreshSession, _ := sessionStore.Get(r, "refresh-token")
 
@@ -26,44 +25,50 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 func HandleFunctions() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", LandingPage)
-	r.HandleFunc("/login", IsLoggedIn).Methods("GET")
-	r.HandleFunc("/login", Login).Methods("POST")
-	r.HandleFunc("/login", Logout).Methods("DELETE")
-	r.HandleFunc("/login", EditPassword).Methods("PATCH")
+	r.HandleFunc("/login", IsLoggedIn).Methods("GET", "OPTIONS")
+	r.HandleFunc("/login", Login).Methods("POST", "OPTIONS")
+	r.HandleFunc("/login", Logout).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/login", EditPassword).Methods("PATCH", "OPTIONS")
 
-	r.HandleFunc("/account", RegisterNewAccount).Methods("POST")
-	r.HandleFunc("/account", GetAccountInfo).Methods("GET")
-	r.HandleFunc("/account", EditAccountInfo).Methods("PATCH")
+	r.HandleFunc("/account", RegisterNewAccount).Methods("POST", "OPTIONS")
+	r.HandleFunc("/account", GetAccountInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/account", EditAccountInfo).Methods("PATCH", "OPTIONS")
 
-	r.HandleFunc("/games", GetGames).Methods("GET")
+	r.HandleFunc("/games", GetGames).Methods("GET", "OPTIONS")
 
-	r.HandleFunc("/games", CreateGame).Methods("POST")
-	r.HandleFunc("/games/{id}", EditGame).Methods("PATCH")
-	r.HandleFunc("/games/{id}", DeleteGame).Methods("DELETE")
-	r.HandleFunc("/games/{id}/users", SellGame).Methods("PATCH")
+	r.HandleFunc("/games", CreateGame).Methods("POST", "OPTIONS")
+	r.HandleFunc("/games/{id}", EditGame).Methods("PATCH", "OPTIONS")
+	r.HandleFunc("/games/{id}", DeleteGame).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/games/{id}/users", SellGame).Methods("PATCH", "OPTIONS")
 
-	r.HandleFunc("/follow/{id}", FollowUser).Methods("POST")
-	r.HandleFunc("/follow/{id}", UnfollowUser).Methods("DELETE")
+	r.HandleFunc("/follow/{id}", FollowUser).Methods("POST", "OPTIONS")
+	r.HandleFunc("/follow/{id}", UnfollowUser).Methods("DELETE", "OPTIONS")
 
-	r.HandleFunc("/followers/{id}", GetFollowers).Methods("GET")
-	r.HandleFunc("/followings/{id}", GetFollowings).Methods("GET")
+	r.HandleFunc("/followers/{id}", GetFollowers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/followings/{id}", GetFollowings).Methods("GET", "OPTIONS")
 
-	r.HandleFunc("/cart", GetCart).Methods("GET")
-	r.HandleFunc("/cart/{id}", AddCart).Methods("POST")
-	r.HandleFunc("/cart/{id}", RemoveCart).Methods("DELETE")
+	r.HandleFunc("/cart", GetCart).Methods("GET", "OPTIONS")
+	r.HandleFunc("/cart/{id}", AddCart).Methods("POST", "OPTIONS")
+	r.HandleFunc("/cart/{id}", RemoveCart).Methods("DELETE", "OPTIONS")
 
-	r.HandleFunc("/wishlist", GetWishList).Methods("GET")
-	r.HandleFunc("/wishlist/{id}", AddWishList).Methods("POST")
-	r.HandleFunc("/wishlist/{id}", RemoveWishList).Methods("DELETE")
+	r.HandleFunc("/wishlist", GetWishList).Methods("GET", "OPTIONS")
+	r.HandleFunc("/wishlist/{id}", AddWishList).Methods("POST", "OPTIONS")
+	r.HandleFunc("/wishlist/{id}", RemoveWishList).Methods("DELETE", "OPTIONS")
 
-	r.HandleFunc("/BoughtList", GetBoughtList).Methods("GET")
+	r.HandleFunc("/BoughtList", GetBoughtList).Methods("GET", "OPTIONS")
 
-	r.HandleFunc("/rate/{id}", Rate).Methods("POST")
-	r.HandleFunc("/rate", GetRatings).Methods("GET")
-	r.HandleFunc("/rate/{id}", EditRating).Methods("PATCH")
-	r.HandleFunc("/rate/{id}", DeleteRating).Methods("DELETE")
+	r.HandleFunc("/rate/{id}", Rate).Methods("POST", "OPTIONS")
+	r.HandleFunc("/rate", GetRatings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/rate/{id}", EditRating).Methods("PATCH", "OPTIONS")
+	r.HandleFunc("/rate/{id}", DeleteRating).Methods("DELETE", "OPTIONS")
 
-	r.HandleFunc("/accounts", GetAccounts).Methods("GET")
+	r.HandleFunc("/accounts", GetAccounts).Methods("GET", "OPTIONS")
 
 	http.ListenAndServe(":8000", r)
+}
+func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization")
+	(*w).WriteHeader(http.StatusAccepted)
 }

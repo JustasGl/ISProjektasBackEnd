@@ -45,6 +45,7 @@ type User struct {
 //it is formatted correctly, and tries to create an account in
 //the database
 func RegisterNewAccount(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	//Creates a struct used to store data decoded from the body
 	user := struct {
 		Name           string `json: "Name"`
@@ -93,6 +94,7 @@ func RegisterNewAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] != nil {
@@ -134,6 +136,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAccountInfo(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	keys := r.URL.Query()
@@ -150,13 +153,18 @@ func GetAccountInfo(w http.ResponseWriter, r *http.Request) {
 		JSONResponse(struct{}{}, w)
 		return
 	}
-
+	if user.ID == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		JSONResponse(struct{}{}, w)
+		return
+	}
 	JSONResponse(user, w)
 	w.WriteHeader(http.StatusOK)
 	return
 }
 
 func EditPassword(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -207,6 +215,7 @@ func EditPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func EditAccountInfo(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -326,6 +335,7 @@ func CreateAccessToken(user User, session *sessions.Session) *sessions.Session {
 }
 
 func IsLoggedIn(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, err := sessionStore.Get(r, "Access-token")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -345,6 +355,7 @@ func IsLoggedIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	sessionAccess, err := sessionStore.Get(r, "Access-token")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -370,6 +381,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func FollowUser(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	//Get user id from auth token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -430,6 +442,7 @@ func FollowUser(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func UnfollowUser(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	//Get user id from auth token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -489,7 +502,7 @@ func UnfollowUser(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetFollowers(w http.ResponseWriter, r *http.Request) {
-	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
+	setupCorsResponse(&w, r)
 	var users []User
 
 	params := mux.Vars(r)
@@ -522,6 +535,7 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetFollowings(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	var users []User
 
 	params := mux.Vars(r)
@@ -553,6 +567,7 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func AddCart(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -591,6 +606,7 @@ func AddCart(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetCart(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -612,6 +628,7 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveCart(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -647,6 +664,7 @@ func RemoveCart(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func AddWishList(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -685,6 +703,7 @@ func AddWishList(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetWishList(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -706,6 +725,7 @@ func GetWishList(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveWishList(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -741,6 +761,7 @@ func RemoveWishList(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetBoughtList(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -761,6 +782,7 @@ func GetBoughtList(w http.ResponseWriter, r *http.Request) {
 	return
 }
 func GetAccounts(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
 	keys := r.URL.Query()
 	FromFollowers := keys.Get("FromFollowers")

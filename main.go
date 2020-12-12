@@ -79,7 +79,6 @@ func main() {
 		log.Println(err.Error())
 	}
 
-	//Checks if Users table exists, if it does not, creates one
 	if !db.HasTable(&User{}) {
 		db.CreateTable(&User{})
 	}

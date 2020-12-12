@@ -28,6 +28,7 @@ type Rating struct {
 }
 
 func Rate(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -98,7 +99,8 @@ func Rate(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetRatings(w http.ResponseWriter, r *http.Request) {
-	// Gets filtering keys from url. e.x ?comment=Puikus&creatorId=1&GameID=1
+	setupCorsResponse(&w, r)
+	// Gets filtering keys from url. e.x ?comment=Puikus&creatorID=1&GameID=1
 	keys := r.URL.Query()
 	id := keys.Get("ID")
 	creatorID := keys.Get("CreatorID")
@@ -203,7 +205,7 @@ func EditRating(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := session.Values["userID"].(uint)
 
-	//Gets id from /events/{id}
+	//Gets id from /rate/{id}
 	params := mux.Vars(r)
 	ratingID, err := strconv.Atoi(params["id"])
 
@@ -233,13 +235,6 @@ func EditRating(w http.ResponseWriter, r *http.Request) {
 	if updatedRating.Comment != "" {
 		tx.Model(&rating).Updates(Rating{Comment: updatedRating.Comment})
 	}
-
-	// //Edits the record in database
-	// if tx.Model(&rating).Updates(Rating{Description: updatedRating.Description}).RowsAffected == 0 {
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	JSONResponse(struct{}{}, w)
-	// 	return
-	// }
 
 	w.WriteHeader(http.StatusOK)
 	JSONResponse(struct{}{}, w)

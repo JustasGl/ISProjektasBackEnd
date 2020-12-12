@@ -29,6 +29,7 @@ type Game struct {
 }
 
 func CreateGame(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	if session.Values["userID"] == nil {
@@ -70,6 +71,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func SellGame(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	fmt.Printf("%s\n", "SellGame Called")
 	//Get user id from auth token
 	session, _ := sessionStore.Get(r, "Access-token")
@@ -121,7 +123,8 @@ func SellGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetGames(w http.ResponseWriter, r *http.Request) {
-	// Gets filtering keys from url. e.x ?location=kaunas&creatorId=1
+	setupCorsResponse(&w, r)
+	// Gets filtering keys from url. e.x ?category=shooter&priceFrom=20&priceTo=40
 	keys := r.URL.Query()
 	category := keys.Get("category")
 	creatorID := keys.Get("creatorID")
@@ -162,6 +165,7 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteGame(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	//Loads creator id from authentication token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -209,6 +213,7 @@ func DeleteGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func EditGame(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	//Loads creator id from authentication token
 	session, _ := sessionStore.Get(r, "Access-token")
 
@@ -219,7 +224,7 @@ func EditGame(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := session.Values["userID"].(uint)
 
-	//Gets id from /events/{id}
+	//Gets id from /games/{id}
 	params := mux.Vars(r)
 	gameID, err := strconv.Atoi(params["id"])
 
@@ -233,7 +238,7 @@ func EditGame(w http.ResponseWriter, r *http.Request) {
 	var game Game
 	tx := db.Where("ID = ?", gameID).First(&game)
 	db.First(&game, gameID)
-	//checks if the user that is trying to delete game is its creator
+	//checks if the user that is trying to edit game is its creator
 	if game.CreatorID != userID {
 		w.WriteHeader(http.StatusUnauthorized)
 		JSONResponse(struct{}{}, w)
@@ -255,13 +260,6 @@ func EditGame(w http.ResponseWriter, r *http.Request) {
 	if updatedGame.Name != "" {
 		tx.Model(&game).Updates(Game{Name: updatedGame.Name})
 	}
-
-	// //Edits the record in database
-	// if tx.Model(&game).Updates(Game{Description: updatedGame.Description}).RowsAffected == 0 {
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	JSONResponse(struct{}{}, w)
-	// 	return
-	// }
 
 	w.WriteHeader(http.StatusOK)
 	JSONResponse(struct{}{}, w)
