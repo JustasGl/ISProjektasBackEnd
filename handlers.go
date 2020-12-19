@@ -24,6 +24,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 func HandleFunctions() {
 	r := mux.NewRouter()
+
 	r.HandleFunc("/", LandingPage)
 	r.HandleFunc("/login", IsLoggedIn).Methods("GET", "OPTIONS")
 	r.HandleFunc("/login", Login).Methods("POST", "OPTIONS")
@@ -70,5 +71,9 @@ func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization")
-	(*w).WriteHeader(http.StatusAccepted)
+	(*w).Header().Set("Content-Type", "text/html; charset=utf-8")
+	if req.Method == "OPTIONS" {
+
+		(*w).WriteHeader(http.StatusOK)
+	}
 }
