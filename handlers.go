@@ -68,10 +68,11 @@ func HandleFunctions() {
 	http.ListenAndServe(":8000", r)
 }
 func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization")
+	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	(*w).Header().Set("Content-Type", "text/html; charset=utf-8")
+	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
 	if req.Method == "OPTIONS" {
 
 		(*w).WriteHeader(http.StatusOK)
