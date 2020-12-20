@@ -61,10 +61,10 @@ Galima tik prisijungus t.y atsiuntus auth token turint role = 1(admin)
 POST request	localhost:8000/games 
 
 {
-	"name": "Battlefield 9",
-	"description": "Clasical shooter",
-	"price": 39.99,
-	"category": "shooter"
+	"Name": "Battlefield 9",
+	"Description": "Clasical shooter",
+	"Price": 39.99,
+	"Category": "shooter"
 }
 
 / edit game / --------------------------------------------------------------------------
@@ -72,9 +72,10 @@ Galima tik prisijungus t.y atsiuntus auth token
 PATCH request	localhost:8000/games/{id}
 LAUKU KURIU NEREDAGUOJAM NERASOM, t.y ne tuscios reiksmes, o eilutes NEBUVIMAS
 {
-	"description": "very long edited description",
-	"startTime": "2020-04-18T11:48:12Z",
-	"endTime": "2020-04-21T11:48:12Z"
+	"Description": "very long edited description",
+	"Category": "Shooter",
+	"Price": 5.5,
+	"Name": "Call of duty"
 }
 
 / delete game / --------------------------------------------------------------------------
@@ -87,7 +88,9 @@ arba
 localhost:8000/games?creatorID=id
 arba
 localhost:8000/games?priceFrom=20&priceTo=40
-
+arba
+localhost:8000/games?id=1 
+Galimi kintamieji category, creatorID, priceFrom, priceTo, id(game id).
 / sell game /  -------------------------------------------------------------------------
 PATCH request	localhost:8000/games/{id}/users (id tai žaidimo id, vartotojo id gaunamas iš session)
 

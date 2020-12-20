@@ -130,6 +130,7 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 	creatorID := keys.Get("creatorID")
 	PriceFrom := keys.Get("priceFrom")
 	PriceTo := keys.Get("priceTo")
+	gameID := keys.Get("gameID")
 	var games []Game
 
 	// Preloads user and creator tables for use in game response
@@ -141,6 +142,9 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 	}
 	if creatorID != "" {
 		tx = tx.Where("creator_id = ?", creatorID)
+	}
+	if gameID != "" {
+		tx = tx.Where("id = ?", gameID)
 	}
 	if PriceFrom != "" && PriceTo != "" {
 		tx = tx.Where("Price > ? and Price < ?", PriceFrom, PriceTo)
