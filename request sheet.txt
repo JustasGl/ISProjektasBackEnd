@@ -90,7 +90,7 @@ arba
 localhost:8000/games?priceFrom=20&priceTo=40
 arba
 localhost:8000/games?id=1 
-Galimi kintamieji category, creatorID, priceFrom, priceTo, id(game id).
+Galimi kintamieji category, creatorID, priceFrom, priceTo, gameID.
 / sell game /  -------------------------------------------------------------------------
 PATCH request	localhost:8000/games/{id}/users (id tai žaidimo id, vartotojo id gaunamas iš session)
 

@@ -144,7 +144,7 @@ func GetGames(w http.ResponseWriter, r *http.Request) {
 		tx = tx.Where("creator_id = ?", creatorID)
 	}
 	if gameID != "" {
-		tx = tx.Where("id = ?", gameID)
+		tx = tx.Where("ID = ?", gameID)
 	}
 	if PriceFrom != "" && PriceTo != "" {
 		tx = tx.Where("Price > ? and Price < ?", PriceFrom, PriceTo)
