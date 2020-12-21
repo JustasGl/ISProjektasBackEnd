@@ -508,15 +508,17 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	keys := r.URL.Query()
-	usrID, err := strconv.Atoi(keys.Get("id"))
-
-	if usrID == 0 || err != nil {
-		usrID = (session.Values["userID"]).(int)
-	}
+	usrID, _ := strconv.Atoi(keys.Get("id"))
 
 	// If a certain tag is not null, it is used to filter games
 	if usrID != 0 {
 		db.Raw("select * from users where id IN ((Select follower_id from Follow where user_id = ?))", usrID).Scan(&users)
+	}
+
+	if usrID != 0 {
+		db.Raw("select * from users where id IN ((Select follower_id from Follow where user_id = ?))", usrID).Scan(&users)
+	} else if session.Values["userID"] != nil {
+		db.Raw("select * from users where id IN ((Select follower_id from Follow where user_id = ?))", session.Values["userID"].(uint)).Scan(&users)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
 		JSONResponse(struct{}{}, w)
@@ -540,21 +542,19 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "Access-token")
 
 	keys := r.URL.Query()
-	usrID, err := strconv.Atoi(keys.Get("id"))
-
-	if usrID == 0 || err != nil {
-		usrID = (session.Values["userID"]).(int)
-	}
+	usrID, _ := strconv.Atoi(keys.Get("id"))
 
 	if usrID != 0 {
 		db.Raw("select * from users where id IN ((Select user_id from Follow where follower_id = ?))", usrID).Scan(&users)
+	} else if session.Values["userID"] != nil {
+		db.Raw("select * from users where id IN ((Select user_id from Follow where follower_id = ?))", session.Values["userID"].(uint)).Scan(&users)
 	} else {
 		w.WriteHeader(http.StatusUnauthorized)
 		JSONResponse(struct{}{}, w)
 		return
 	}
 
-	// If no games exist, return Bad request
+	// If no users exist, return Bad request
 	if len(users) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		JSONResponse(struct{}{}, w)
