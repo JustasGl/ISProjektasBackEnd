@@ -650,7 +650,7 @@ func RemoveCart(w http.ResponseWriter, r *http.Request) {
 	}
 	var game Game
 
-	db.Raw("SELECT * from users where ID = (select user_id from Cart where game_id = ?)", gameID).Scan(&game)
+	db.Raw("SELECT * from games where ID = ?", gameID).Scan(&game)
 
 	if game.ID == 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -747,7 +747,7 @@ func RemoveWishList(w http.ResponseWriter, r *http.Request) {
 	}
 	var game Game
 
-	db.Raw("SELECT * from users where ID = (select user_id from WishList where game_id = ?)", gameID).Scan(&game)
+	db.Raw("SELECT * from games where ID = ?", gameID).Scan(&game)
 
 	if game.ID == 0 {
 		w.WriteHeader(http.StatusBadRequest)
