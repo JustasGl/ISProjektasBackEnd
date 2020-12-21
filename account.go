@@ -505,6 +505,8 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 	setupCorsResponse(&w, r)
 	var users []User
 
+	session, _ := sessionStore.Get(r, "Access-token")
+
 	params := mux.Vars(r)
 	usrID, err := strconv.Atoi(params["id"])
 
@@ -512,6 +514,10 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		JSONResponse(struct{}{}, w)
 		return
+	}
+
+	if usrID == 0 {
+		usrID = session.Values["userID"].(int)
 	}
 
 	fmt.Printf("get %d user followers", usrID)
@@ -538,6 +544,8 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 	setupCorsResponse(&w, r)
 	var users []User
 
+	session, _ := sessionStore.Get(r, "Access-token")
+
 	params := mux.Vars(r)
 	usrID, err := strconv.Atoi(params["id"])
 
@@ -545,6 +553,10 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		JSONResponse(struct{}{}, w)
 		return
+	}
+
+	if usrID == 0 {
+		usrID = session.Values["userID"].(int)
 	}
 
 	fmt.Printf("get %d user followings", usrID)
