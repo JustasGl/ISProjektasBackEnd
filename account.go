@@ -507,29 +507,22 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := sessionStore.Get(r, "Access-token")
 
-	params := mux.Vars(r)
-	usrID, err := strconv.Atoi(params["id"])
+	keys := r.URL.Query()
+	usrID, err := strconv.Atoi(keys.Get("id"))
 
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		JSONResponse(struct{}{}, w)
-		return
+	if usrID == 0 || err != nil {
+		usrID = (session.Values["userID"]).(int)
 	}
-
-	if usrID == 0 {
-		usrID = session.Values["userID"].(int)
-	}
-
-	fmt.Printf("get %d user followers", usrID)
-	// Preloads user and creator tables for use in game response
 
 	// If a certain tag is not null, it is used to filter games
 	if usrID != 0 {
 		db.Raw("select * from users where id IN ((Select follower_id from Follow where user_id = ?))", usrID).Scan(&users)
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
 	}
-	// Finds users based on given parameters
 
-	// If no users exist, return Bad request
 	if len(users) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		JSONResponse(struct{}{}, w)
@@ -546,25 +539,19 @@ func GetFollowings(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := sessionStore.Get(r, "Access-token")
 
-	params := mux.Vars(r)
-	usrID, err := strconv.Atoi(params["id"])
+	keys := r.URL.Query()
+	usrID, err := strconv.Atoi(keys.Get("id"))
 
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		JSONResponse(struct{}{}, w)
-		return
+	if usrID == 0 || err != nil {
+		usrID = (session.Values["userID"]).(int)
 	}
 
-	if usrID == 0 {
-		usrID = session.Values["userID"].(int)
-	}
-
-	fmt.Printf("get %d user followings", usrID)
-	// Preloads user and creator tables for use in game response
-
-	// If a certain tag is not null, it is used to filter games
 	if usrID != 0 {
 		db.Raw("select * from users where id IN ((Select user_id from Follow where follower_id = ?))", usrID).Scan(&users)
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+		JSONResponse(struct{}{}, w)
+		return
 	}
 
 	// If no games exist, return Bad request

@@ -45,8 +45,8 @@ func HandleFunctions() {
 	r.HandleFunc("/follow/{id}", FollowUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/follow/{id}", UnfollowUser).Methods("DELETE", "OPTIONS")
 
-	r.HandleFunc("/followers/{id}", GetFollowers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/followings/{id}", GetFollowings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/followers", GetFollowers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/followings", GetFollowings).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/cart", GetCart).Methods("GET", "OPTIONS")
 	r.HandleFunc("/cart/{id}", AddCart).Methods("POST", "OPTIONS")
